@@ -6,6 +6,9 @@
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {},
+    "build:watch": {
+      "cache": false
+    },
     "dev": {
       "cache": false,
       "persistent": true
