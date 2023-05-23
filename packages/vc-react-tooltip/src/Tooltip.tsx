@@ -1,94 +1,57 @@
 import {
-  PropsWithChildren,
-  ReactNode,
+  CSSProperties,
+  cloneElement,
+  isValidElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
+  useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { FindDomNode } from "./FindDomNode";
-
-type TooltipPlacement = "top" | "left" | "right" | "bottom";
-
-type TooltipTrigger = ("hover" | "focus" | "click")[];
-
-type TooltipTitle = ReactNode | (() => ReactNode);
-
-export type TooltipProps = PropsWithChildren<{
-  placement: TooltipPlacement;
-  trigger: TooltipTrigger;
-  title: TooltipTitle;
-}>;
+import { useClickOutSide } from "./useClickOutSide";
+import { isPortal } from "react-is";
+import { supportRef, composeRefs } from "./refs";
+import { TooltipProps } from "./types";
 
 export const Tooltip = ({
   children,
   placement,
   trigger,
   title,
+  color,
+  defaultOpen = false,
+  zIndex,
+  onOpenChange,
 }: TooltipProps) => {
   const popoverContainerRef = useRef(document.createElement("div"));
-  const contentInnerRef = useRef<{
-    getDomNode: () => HTMLElement;
-  } | null>(null);
-
+  const contentElementRef = useRef<HTMLElement | null>(null);
   const popoverElementRef = useRef<HTMLDivElement | null>(null);
+  const [state, setState] = useState({
+    open: defaultOpen,
+  });
 
   if (!document.body.contains(popoverContainerRef.current)) {
     document.body.append(popoverContainerRef.current);
   }
 
   const displayPopover = useCallback(() => {
-    const node = contentInnerRef.current?.getDomNode();
-    const popoverElement = popoverElementRef.current;
-    if (!node || !popoverElement) return;
-    const rect = node.getBoundingClientRect();
-
-    const isDisplay = popoverElement.style.display === "block";
-    if (isDisplay) return;
-
-    popoverElement.style.display = "block";
-
-    switch (placement) {
-      case "top":
-        popoverElement.style.left = `${
-          rect.x + rect.width / 2 - popoverElement.clientWidth / 2
-        }px`;
-        popoverElement.style.top = `${rect.y - rect.height}px`;
-        break;
-      case "bottom":
-        popoverElement.style.left = `${
-          rect.x + rect.width / 2 - popoverElement.clientWidth / 2
-        }px`;
-        popoverElement.style.top = `${rect.y + rect.height}px`;
-        break;
-      case "left":
-        popoverElement.style.left = `${rect.x - popoverElement.clientWidth}px`;
-        popoverElement.style.top = `${
-          rect.y + rect.height / 2 - popoverElement.clientHeight / 2
-        }px`;
-        break;
-      case "right":
-        popoverElement.style.left = `${rect.x + rect.width}px`;
-        popoverElement.style.top = `${
-          rect.y + rect.height / 2 - popoverElement.clientHeight / 2
-        }px`;
-        break;
-      default:
-        break;
-    }
+    setState((prevState) => ({
+      ...prevState,
+      open: true,
+    }));
   }, [placement]);
 
   const hidePopover = useCallback(() => {
-    const node = contentInnerRef.current?.getDomNode();
-    const popoverElement = popoverElementRef.current;
-    if (!node || !popoverElement) return;
-
-    popoverElement.style.display = "none";
+    setState((prevState) => ({
+      ...prevState,
+      open: false,
+    }));
   }, []);
 
   useEffect(
     function triggerContentEvent() {
-      const node = contentInnerRef.current?.getDomNode();
+      const node = contentElementRef.current;
       if (!node) return;
 
       const cleanups: (() => void)[] = [];
@@ -107,12 +70,8 @@ export const Tooltip = ({
       if (trigger.includes("click")) {
         node.addEventListener("click", displayPopover);
 
-        // Click outside to hide popover
-
         cleanups.push(() => {
           node.removeEventListener("click", displayPopover);
-
-          // Remove click outside event
         });
       }
 
@@ -123,14 +82,99 @@ export const Tooltip = ({
     [...trigger, displayPopover, hidePopover]
   );
 
+  useClickOutSide(
+    popoverElementRef,
+    function hidePopoverOnClickOutSide() {
+      const popoverIsOpen = popoverElementRef.current?.style.display !== "none";
+      if (popoverIsOpen) {
+        hidePopover();
+      }
+    },
+    {
+      capture: true,
+      condition: trigger.includes("click"),
+    }
+  );
+
+  useLayoutEffect(
+    function updatePositionPopoverOnOpenChange() {
+      if (state.open) {
+        const node = contentElementRef.current;
+        const popoverElement = popoverElementRef.current;
+        if (!node || !popoverElement) return;
+        const rect = node.getBoundingClientRect();
+
+        switch (placement) {
+          case "top":
+            popoverElement.style.left = `${
+              rect.x + rect.width / 2 - popoverElement.clientWidth / 2
+            }px`;
+            popoverElement.style.top = `${rect.y - rect.height}px`;
+            break;
+          case "bottom":
+            popoverElement.style.left = `${
+              rect.x + rect.width / 2 - popoverElement.clientWidth / 2
+            }px`;
+            popoverElement.style.top = `${rect.y + rect.height}px`;
+            break;
+          case "left":
+            popoverElement.style.left = `${
+              rect.x - popoverElement.clientWidth
+            }px`;
+            popoverElement.style.top = `${
+              rect.y + rect.height / 2 - popoverElement.clientHeight / 2
+            }px`;
+            break;
+          case "right":
+            popoverElement.style.left = `${rect.x + rect.width}px`;
+            popoverElement.style.top = `${
+              rect.y + rect.height / 2 - popoverElement.clientHeight / 2
+            }px`;
+            break;
+          default:
+            break;
+        }
+      }
+    },
+    [state.open]
+  );
+
+  useEffect(
+    function callbackOnOpenChange() {
+      if (onOpenChange) {
+        onOpenChange(state.open);
+      }
+    },
+    [state.open, onOpenChange]
+  );
+
+  const childrenIsValidElement = isValidElement(children);
+  const canUseRef = supportRef(children);
+  let newChildren = children;
+
+  if (childrenIsValidElement && canUseRef && !isPortal(children)) {
+    // TODO improve type
+    newChildren = cloneElement(children, {
+      ...(children as any).props,
+      ref: composeRefs((children as any).ref, contentElementRef),
+    });
+  }
+
+  const popoverStyle: CSSProperties = {
+    position: "absolute",
+    display: state.open ? "block" : "none",
+    backgroundColor: color,
+    zIndex,
+  };
+
   return (
     <>
-      <FindDomNode innerRef={contentInnerRef}>{children}</FindDomNode>
+      {newChildren}
       {createPortal(
         <div
           className="vc-tooltip"
           ref={popoverElementRef}
-          style={{ position: "absolute", display: "none" }}
+          style={popoverStyle}
         >
           {typeof title === "function" ? title() : title}
         </div>,
