@@ -1,27 +1,40 @@
 {
   "name": "vc-react-tooltip",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "private": false,
+  "description": "An internal tooltip component",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/types/index.d.ts",
   "scripts": {
-    "build": "rollup -c",
-    "build:watch": "rollup -c --watch"
+    "clean": "rimraf dist",
+    "build:dts": "dts-bundle-generator -o dist/types/index.d.ts src/index.ts",
+    "build": "pnpm clean && rollup -c && pnpm build:dts",
+    "build:dev": "rollup -c",
+    "build:watch": "pnpm run build:dev --watch",
+    "dev": "pnpm run build --watch"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "tooltip",
+    "popover",
+    "vcteam"
+  ],
+  "author": "VCTeam",
   "license": "ISC",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.1.0",
-    "@rollup/plugin-node-resolve": "^15.0.2",
-    "@types/react": "^18.2.5",
-    "@types/react-dom": "^18.0.11",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@types/react": "^18.2.7",
+    "@types/react-dom": "^18.2.4",
     "@types/react-is": "^18.2.0",
+    "dts-bundle-generator": "^8.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "rollup": "^3.21.5",
+    "rimraf": "^5.0.1",
+    "rollup": "^3.23.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
-    "rollup-plugin-scss": "3",
+    "rollup-plugin-scss": "^3.0.0",
     "rollup-plugin-typescript2": "^0.34.1",
     "sass": "^1.62.1",
     "typescript": "^5.0.4"
@@ -31,6 +44,7 @@
     "react-dom": "^18.2.0"
   },
   "dependencies": {
+    "@emotion/react": "^11.11.0",
     "react-is": "^18.2.0"
   }
 }

@@ -6,9 +6,8 @@ function App() {
       <Tooltip
         placement="right"
         trigger={["hover"]}
-        title="Popover"
-        color="blue"
-        defaultOpen={false}
+        title={<span style={{ color: "white" }}>Popover</span>}
+        defaultOpen
       >
         <span style={{ border: "1px solid red" }}>
           VC-Team is an open source team

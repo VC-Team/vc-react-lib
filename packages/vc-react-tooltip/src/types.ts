@@ -15,3 +15,10 @@ export type TooltipProps = PropsWithChildren<{
   zIndex?: number;
   onOpenChange?: (open: boolean) => void;
 }>;
+
+export type TooltipPositionStyle = {
+  top?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+};

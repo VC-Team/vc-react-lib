@@ -23,13 +23,5 @@ export default {
       sourcemap: true,
     },
   ],
-  plugins: [
-    peerDepsExternal(),
-    resolve(),
-    commonjs(),
-    typescript({
-      useTsconfigDeclarationDir: true,
-    }),
-    scss(),
-  ],
+  plugins: [peerDepsExternal(), resolve(), commonjs(), typescript(), scss()],
 };
